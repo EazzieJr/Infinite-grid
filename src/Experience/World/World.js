@@ -1,7 +1,5 @@
 import Experience from "../Experience";
-import Environment from './Environment';
-import Floor from './Floor';
-import Fox from './Fox';
+import Planes from './Planes';
 
 export default class world {
 	constructor() {
@@ -12,9 +10,7 @@ export default class world {
 
 		this.resources.on('ready', () => {
 			// Setup
-			this.floor = new Floor()
-			this.fox = new Fox()
-			this.environment = new Environment()
+			this.planes = new Planes()
 		})
 	}
 
