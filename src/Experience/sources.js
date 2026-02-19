@@ -13,20 +13,19 @@ export default [
 	},
 
 	{
-		name: "grassColorTexture",
+		name: "planeImages",
 		type: "texture",
-		path: "textures/dirt/color.jpg"
-	},
-
-	{
-		name: "grassNormalTexture",
-		type: "texture",
-		path: "textures/dirt/normal.jpg"
-	},
-
-	{
-		name: "foxModel",
-		type: "gltfModel",
-		path: "models/Fox/glTF/Fox.gltf"
+		path: [
+			'https://picsum.photos/1600/900?random=1',
+			'https://picsum.photos/1600/900?random=2',
+			'https://picsum.photos/1600/900?random=3',
+			'https://picsum.photos/1600/900?random=4',
+			'https://picsum.photos/1600/900?random=5',
+			'https://picsum.photos/1600/900?random=6',
+			'https://picsum.photos/1600/900?random=7',
+			'https://picsum.photos/1600/900?random=8',
+			'https://picsum.photos/1600/900?random=9',
+			'https://picsum.photos/1600/900?random=10',
+		],
 	},
 ]

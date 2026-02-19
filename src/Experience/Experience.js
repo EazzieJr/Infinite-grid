@@ -34,6 +34,11 @@ export default class Experience {
 		this.renderer = new Renderer()
 		this.world = new world()
 
+		// Debug
+		if (this.debug.active) {
+			this.debugFolder = this.debug.ui.addFolder('Experience')
+		}
+
 		this.sizes.on('resize', () => {
 			this.resize()
 		})
@@ -41,6 +46,22 @@ export default class Experience {
 		this.time.on('tick', () => {
 			this.update()
 		})
+
+		// this.setFog()
+	}
+
+	setFog() {
+		this.scene.fog = new THREE.Fog(0xffffff, 1, 25)
+
+		if (this.debug.active) {
+			this.debugFolder.addColor(this.scene.fog, "color").name("Fog (color)")
+			this.debugFolder.add(this.scene.fog, "near").name("Fog (near)").min(0)
+				.max(100)
+				.step(1)
+			this.debugFolder.add(this.scene.fog, "far").name("Fog (far)").min(0)
+				.max(100)
+				.step(1)
+		}
 	}
 
 	resize() {
