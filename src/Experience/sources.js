@@ -12,20 +12,20 @@ export default [
 		]
 	},
 
-	{
-		name: "planeImages",
-		type: "texture",
-		path: [
-			'https://picsum.photos/1600/900?random=1',
-			'https://picsum.photos/1600/900?random=2',
-			'https://picsum.photos/1600/900?random=3',
-			'https://picsum.photos/1600/900?random=4',
-			'https://picsum.photos/1600/900?random=5',
-			'https://picsum.photos/1600/900?random=6',
-			'https://picsum.photos/1600/900?random=7',
-			'https://picsum.photos/1600/900?random=8',
-			'https://picsum.photos/1600/900?random=9',
-			'https://picsum.photos/1600/900?random=10',
-		],
-	},
+	// {
+	// 	name: "planeImages",
+	// 	type: "texture",
+	// 	path: [
+	// 		'https://picsum.photos/1600/900?random=1',
+	// 		'https://picsum.photos/1600/900?random=2',
+	// 		'https://picsum.photos/1600/900?random=3',
+	// 		'https://picsum.photos/1600/900?random=4',
+	// 		'https://picsum.photos/1600/900?random=5',
+	// 		'https://picsum.photos/1600/900?random=6',
+	// 		'https://picsum.photos/1600/900?random=7',
+	// 		'https://picsum.photos/1600/900?random=8',
+	// 		'https://picsum.photos/1600/900?random=9',
+	// 		'https://picsum.photos/1600/900?random=10',
+	// 	],
+	// },
 ]

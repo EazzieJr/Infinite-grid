@@ -15,8 +15,8 @@ export default class world {
 	}
 
 	update() {
-		if (this.fox) {
-			this.fox.update()
+		if (this.planes) {
+			this.planes.update()
 		}
 	}
 }

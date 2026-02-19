@@ -7,11 +7,15 @@ import world from './World/World';
 import Resources from './Utils/Resources';
 import sources from './sources'
 import Debug from './Utils/Debug';
+import Raycaster from './Utils/Raycaster';
+import Mouse from './Utils/Mouse';
+
+
 
 let instance;
 
 export default class Experience {
-	constructor(canvas) {
+	constructor(canvas, audio) {
 		if (instance) {
 			return instance
 		}
@@ -23,6 +27,7 @@ export default class Experience {
 
 		// Options
 		this.canvas = canvas
+		this.audio = audio
 
 		//Setup
 		this.debug = new Debug()
@@ -30,9 +35,11 @@ export default class Experience {
 		this.time = new Time()
 		this.scene = new THREE.Scene()
 		this.resources = new Resources(sources)
+		this.mouse = new Mouse(this.sizes)
 		this.camera = new Camera()
 		this.renderer = new Renderer()
 		this.world = new world()
+		this.raycaster = new Raycaster()
 
 		// Debug
 		if (this.debug.active) {

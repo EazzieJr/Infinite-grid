@@ -5,7 +5,8 @@ import GUI from 'lil-gui'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 
 const canvas = document.querySelector('canvas.webgl')
-const exp = new Experience(canvas)
+const audio = document.querySelector('audio')
+const exp = new Experience(canvas, audio)
 
 // /**
 //  * Loaders
