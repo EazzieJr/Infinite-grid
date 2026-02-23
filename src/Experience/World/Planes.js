@@ -12,6 +12,7 @@ export default class Planes {
 		this.raycaster = this.experience.raycaster
 		this.mouse = this.experience.mouse
 		this.audio = this.experience.audio
+		this.switcher = this.experience.switcher
 
 		// Debug
 		if (this.debug.active) {
@@ -23,6 +24,13 @@ export default class Planes {
 		this.currentIntersect = null
 		this.animated = false
 		this.planesDebugActive = false
+		this.planeCount = 36
+
+		this.switcher.forEach(button => {
+			button.addEventListener('click', () => {
+				this.switchLayout(button.dataset.layout)
+			})
+		})
 
 		this.scene.add(this.planes)
 
@@ -30,14 +38,18 @@ export default class Planes {
 		this.tempGeoLocation = {}
 		this.pickedPlane = null
 
-		this.initPlanes()
+		this.createPlanes()
 		this.checkForClick()
 	}
 
-	initPlanes() {
-		const planeCount = 36;
+	createPlanes() {
+		this.planeCount = 36;
 
-		for (let i = 0; i < planeCount; i++) {
+		if (this.scene.children.length < 1) {
+			console.log("did i add the planes group to the scene?");
+			this.scene.add(this.planes)
+		}
+		for (let i = 0; i < this.planeCount; i++) {
 			const material = new THREE.MeshBasicMaterial({
 				color: 0xEEEEEE,
 				side: THREE.DoubleSide
@@ -53,9 +65,63 @@ export default class Planes {
 			plane.updateMatrixWorld()
 		}
 
+		console.log(this.scene);
+
 		setTimeout(() => {
 			this.animate()
 		}, 1000)
+	}
+
+	initLinearPlanes() {
+		const spacing = 1.25;
+		const planes = this.planes.children;
+		
+		planes.forEach((plane, i) => {
+			gsap.to(plane.position, {
+				x: 0,
+				y: -i * spacing,
+				z: 0,
+				duration: 1.5,
+				ease: 'power3.inOut'
+			})
+
+			gsap.to([plane.rotation, this.planes.rotation], {
+				x: 0,
+				y: 0,
+				z: 0,
+				duration: 1.5,
+				ease: 'power3.inOut'
+			})
+
+			gsap.to(this.camera.rotation, {
+				x: 0,
+				y: 0,
+				z: 0,
+				duration: 1.5,
+				ease: 'power3.inOut'
+			})
+			gsap.to(this.camera.position, {
+				z: 3,
+				duration: 1.5,
+				ease: 'power3.inOut'
+			})
+
+			// plane.position.set(0, 0, -i * spacing);
+			
+			plane.updateMatrixWorld()
+		})
+	}
+
+	switchLayout(layout) {
+		this.planesRotationTl?.kill()
+		if (layout === 'Linear') {
+			this.initLinearPlanes()
+		} else if (layout === 'Circular') {
+			this.createPlanes()
+		} else if (layout === 'Reset') {
+			this.destroy()
+			this.createPlanes()
+		}
 	}
 
 	animate() {
