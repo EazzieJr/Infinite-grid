@@ -6,7 +6,8 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 
 const canvas = document.querySelector('canvas.webgl')
 const audio = document.querySelector('audio')
-const exp = new Experience(canvas, audio)
+const switcher = document.querySelectorAll('button')
+const exp = new Experience(canvas, audio, switcher)
 
 // /**
 //  * Loaders

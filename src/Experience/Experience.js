@@ -15,7 +15,7 @@ import Mouse from './Utils/Mouse';
 let instance;
 
 export default class Experience {
-	constructor(canvas, audio) {
+	constructor(canvas, audio, switcher) {
 		if (instance) {
 			return instance
 		}
@@ -28,6 +28,7 @@ export default class Experience {
 		// Options
 		this.canvas = canvas
 		this.audio = audio
+		this.switcher = switcher
 
 		//Setup
 		this.debug = new Debug()
