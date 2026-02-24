@@ -27,7 +27,7 @@ export default class Planes {
 		this.scene.add(this.planes)
 
 		// Caches
-		this.tempGeoLocation = {}
+		this.snapshot = {}
 		this.pickedPlane = null
 
 		this.initPlanes()
@@ -64,6 +64,9 @@ export default class Planes {
 	}
 
 	updateRaycast() {
+		// DON'T raycast at all when a plane is picked
+		if (this.pickedPlane) return;
+
 		this.raycaster.instance.setFromCamera(this.mouse.instance, this.camera);
 		const intersects = this.raycaster.instance.intersectObjects(this.planes.children);
 
@@ -71,9 +74,6 @@ export default class Planes {
 			const intersected = intersects[0].object;
 
 			if (this.currentIntersect !== intersected) {
-				// don't re-hover the picked plane
-				if (this.pickedPlane === intersected) return;
-
 				this._resetHoveredPlane();
 				this.currentIntersect = intersected;
 
@@ -84,7 +84,6 @@ export default class Planes {
 				}
 				this.planesRotationTl?.pause();
 
-				// lift plane
 				gsap.killTweensOf(intersected.position);
 				gsap.to(intersected.position, { y: 0.25, duration: 0.5, ease: 'power3.out' });
 			}
@@ -92,16 +91,13 @@ export default class Planes {
 			if (this.currentIntersect) {
 				this._resetHoveredPlane();
 				this.currentIntersect = null;
-
-				if (!this.pickedPlane) {
-					this.planesRotationTl?.play();
-				}
+				this.planesRotationTl?.play();
 			}
 		}
 	}
 
 	checkForClick() {
-		window.addEventListener('click', () => {
+		this._clickHandler = () => {
 			if (!this.currentIntersect) {
 				if (this.pickedPlane) {
 					this.restoreScene();
@@ -113,56 +109,53 @@ export default class Planes {
 			if (this.pickedPlane === this.currentIntersect) return;
 
 			this._cacheTransforms();
-			this._animatePickedPlane();
-		});
+		}
+
+		window.addEventListener('click', this._clickHandler);
 	}
 
 	restoreScene() {
-		if (!this.pickedPlane || !this.tempGeoLocation.cameraPosition) return;
+		if (!this.pickedPlane || !this.snapshot.camera.position) return;
 
 		const duration = 1.5;
 
 		gsap.to(this.camera.position, {
-			x: this.tempGeoLocation.cameraPosition.x,
-			y: this.tempGeoLocation.cameraPosition.y,
-			z: this.tempGeoLocation.cameraPosition.z,
+			x: this.snapshot.camera.position.x,
+			y: this.snapshot.camera.position.y,
+			z: this.snapshot.camera.position.z,
 			duration,
 			ease: 'power3.inOut'
 		});
 
 		gsap.to(this.planes.rotation, {
-			x: this.tempGeoLocation.planesRotation.x,
-			y: this.tempGeoLocation.planesRotation.y,
-			z: this.tempGeoLocation.planesRotation.z,
+			x: this.snapshot.planes.rotation.x,
+			y: this.snapshot.planes.rotation.y,
+			z: this.snapshot.planes.rotation.z,
 			duration,
-			ease: 'power3.inOut'
-		});
-
-		gsap.to(this.scene.rotation, {
-			x: this.tempGeoLocation.sceneRotation.x,
-			y: this.tempGeoLocation.sceneRotation.y,
-			z: this.tempGeoLocation.sceneRotation.z,
-			duration,
-			ease: 'power3.inOut'
-		});
-
-		this.planes.children.forEach(plane => {
-			if (plane !== this.pickedPlane) {
-				gsap.to(plane.position, { y: 0, duration, ease: 'power3.inOut' });
-			}
-		});
-
-		gsap.to(this.pickedPlane.position, {
-			x: this.tempGeoLocation.clickedPlanePosition.x,
-			y: this.tempGeoLocation.clickedPlanePosition.y,
-			z: this.tempGeoLocation.clickedPlanePosition.z,
-			duration,
-			ease: 'power3.inOut',
+			ease: 'power3.out',
 			onComplete: () => {
 				this.pickedPlane = null;
 				this.animated = true;
 				this.planesRotationTl?.play();
 			}
+		});
+
+
+		this.planes.children.forEach((plane, index) => {
+			// if (plane !== this.pickedPlane) {
+			gsap.to(plane.position, {
+				x: this.snapshot.planeTransforms[index].position.x,
+				y: 0,
+				z: this.snapshot.planeTransforms[index].position.z,
+				duration,
+				ease: 'power3.inOut'
+			});
+
+			gsap.to(plane.rotation, {
+				y: this.snapshot.planeTransforms[index].rotation.y,
+				duration,
+				ease: 'power3.inOut'
+			});
 		});
 	}
 
@@ -172,6 +165,7 @@ export default class Planes {
 			plane.material.dispose();
 		});
 		this.scene.remove(this.planes);
+		window.removeEventListener('click', this._clickHandler);
 	}
 
 	update() {
@@ -226,22 +220,21 @@ export default class Planes {
 	}
 
 	_attachDebugOnComplete() {
-		this.planesRotationTl.eventCallback('onComplete', () => {
-			if (!this.planesDebugActive && this.debug.active) {
-				['x', 'y', 'z'].forEach(ax =>
-					this.debugFolder
-						.add(this.planes.rotation, ax)
-						.name(`Rot ${ax.toUpperCase()}`)
-						.min(-10).max(10).step(0.1)
-				);
-				this.planesDebugActive = true;
-			}
-			this.animated = true;
-		});
+		if (!this.planesDebugActive && this.debug.active) {
+			['x', 'y', 'z'].forEach(ax =>
+				this.debugFolder
+					.add(this.planes.rotation, ax)
+					.name(`Rot ${ax.toUpperCase()}`)
+					.min(-10).max(10).step(0.1)
+			);
+			this.planesDebugActive = true;
+		}
+		// this.animated = true;
 	}
 
 	_resetHoveredPlane() {
 		if (!this.currentIntersect) return;
+		console.log("reset");
 		gsap.killTweensOf(this.currentIntersect.position);
 		gsap.to(this.currentIntersect.position, {
 			y: 0,
@@ -252,14 +245,21 @@ export default class Planes {
 
 	_cacheTransforms() {
 		this.pickedPlane = this.currentIntersect;
-		this.tempGeoLocation = {
-			cameraPosition: this.camera.position.clone(),
-			cameraRotation: this.camera.rotation.clone(),
-			clickedPlanePosition: this.pickedPlane.position.clone(),
-			clickedPlaneRotation: this.pickedPlane.rotation.clone(),
-			sceneRotation: this.scene.rotation.clone(),
-			planesRotation: this.planes.rotation.clone(),
+		this.snapshot = {
+			camera: {
+				position: this.camera.position.clone(),
+				rotation: this.camera.rotation.clone(),
+			},
+			planes: {
+				rotation: this.planes.rotation.clone(),
+			},
+			planeTransforms: this.planes.children.map(p => ({
+				position: p.position.clone(),
+				rotation: p.rotation.clone(),
+			}))
 		};
+
+		this._animatePickedPlane();
 	}
 
 	_animatePickedPlane() {
@@ -274,37 +274,42 @@ export default class Planes {
 
 		planes.forEach((plane, index) => {
 			if (plane === picked) {
+				console.log("Initial Position: ", plane.position);
+
 				gsap.to(plane.position, {
 					x: 0,
 					y: 0,
 					z: 0,
 					duration: 1.5,
-					delay: 0.5,
-					ease: "power3.inOut"
+					// delay: 0.5,
+					ease: "power3.inOut",
+					onComplete: () => {
+						this.camera.lookAt(plane.position);
+					}
 				});
 
-				gsap.to([plane.rotation, this.scene.rotation, this.planes.rotation], {
+				gsap.to(plane.rotation, {
 					x: 0,
 					y: 0,
 					z: 0,
 					duration: 2.5,
-					ease: "power3.inOut"
+					ease: "power3.inOut",
+				});
+
+				gsap.to(this.planes.rotation, {
+					x: 0,
+					z: 0,
+					y: 0,
+					duration: 2.5,
+					ease: "power3.inOut",
 				});
 
 				gsap.to(this.camera.position, {
 					z: 2,
 					duration: 2.5,
 					ease: "power3.inOut",
-					onComplete: () => {
-						this.animated = true;
-					}
 				});
 			} else {
-				if (this.audio.paused || this.audio.currentTime > 0.1) {
-					this.audio.currentTime = 0;
-					this.audio.play();
-				}
-
 				const total = planes.length;
 				const delay = index > pickedIndex
 					? (index - pickedIndex) * delayMultiplier
