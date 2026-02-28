@@ -116,7 +116,7 @@ export default class Planes {
 			plane.updateMatrixWorld()
 		}
 
-		this.stackPlanes()
+		// this.stackPlanes()
 	}
 
 	stackPlanes() {
@@ -334,7 +334,7 @@ export default class Planes {
 	}
 
 	_spreadPlanes() {
-		const radius = 3;
+		const radius = 4;
 		const angleStep = (Math.PI * 2) / this.planes.children.length;
 
 		this.planes.children.forEach((plane, i) => {
