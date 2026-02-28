@@ -41,6 +41,7 @@ export default class Planes {
 		this.scene.add(this.planes)
 
 		// Caches
+		this.planesRotationTl = null
 		this.snapshot = {}
 		this.pickedPlane = null
 		this.currentLayout = null
