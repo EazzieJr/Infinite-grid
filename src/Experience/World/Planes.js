@@ -76,7 +76,7 @@ export default class Planes {
 		}
 
 		if (this.debugFolder) {
-			this.debugFolder.add(this, 'waveAmplitude').min(0).max(1).step(0.01).onChange(() => {
+			this.debugFolder.add(this, 'waveAmplitude').min(0).max(10).step(0.1).onChange(() => {
 				this.planes.children.forEach(plane => {
 					plane.material.uniforms.uWaveAmplitude.value = this.waveAmplitude
 				})
