@@ -1,6 +1,8 @@
 import { gsap } from "gsap"
 import * as THREE from 'three'
 import Experience from "../Experience";
+import vertexShader from "../../../static/shaders/vertex.glsl"
+import fragmentShader from "../../../static/shaders/fragment.glsl"
 
 export default class Planes {
 	constructor() {
@@ -13,6 +15,9 @@ export default class Planes {
 		this.mouse = this.experience.mouse
 		this.audio = this.experience.audio
 		this.switcher = this.experience.switcher
+		this.images = this.experience.resources.items.planeImages
+
+		console.log(this.images)
 
 		// Debug
 		if (this.debug.active) {
@@ -25,6 +30,7 @@ export default class Planes {
 		this.animated = false
 		this.planesDebugActive = false
 		this.planeCount = 36
+		this.waveAmplitude = 0.6
 
 		this.switcher.forEach(button => {
 			button.addEventListener('click', () => {
@@ -35,47 +41,107 @@ export default class Planes {
 		this.scene.add(this.planes)
 
 		// Caches
+		this.planesRotationTl = null
 		this.snapshot = {}
 		this.pickedPlane = null
+		this.currentLayout = null
+		this.layouts = {
+			Stack: {
+				camera: { position: { z: 5 }, rotation: { x: 0, y: 0, z: 0 } },
+				planes: { rotation: { x: 0, y: 0, z: 0 } },
+				init: () => this.stackPlanes()
+			},
+			Linear: {
+				camera: { position: { z: 3 }, rotation: { x: 0, y: 0, z: 0 } },
+				planes: { rotation: { x: 0, y: 0, z: 0 } },
+				init: () => this.initLinearPlanes()
+			},
+			Circular: {
+				camera: { position: { z: 15 }, rotation: { x: 0.25, y: 0, z: 0 } },
+				planes: { rotation: { x: 0, y: 0, z: 0 } },
+				init: () => {
+					this._spreadPlanes()
+				}
+			}
+		}
+
+		// --- Drag rotation state ---
+		this.drag = {
+			active: false,
+			startX: 0,
+			lastX: 0,
+			velocityX: 0,
+			damping: 0.99,        // 0–1, higher = longer coast
+			sensitivity: 0.005,   // radians per pixel
+		}
+
+		if (this.debugFolder) {
+			this.debugFolder.add(this, 'waveAmplitude').min(0).max(1).step(0.01).onChange(() => {
+				this.planes.children.forEach(plane => {
+					plane.material.uniforms.uWaveAmplitude.value = this.waveAmplitude
+				})
+			})
+
+			this.debugFolder.add(this.drag, 'damping').min(0.92).max(0.99).step(0.01)
+		}
+
+		this._initDragListeners()
+		// --------------------------
 
 		this.createPlanes()
-		this.checkForClick()
+		setTimeout(() => {
+			this.animate()
+		}, 1000)
+		// this.checkForClick()
 	}
 
 	createPlanes() {
-		this.planeCount = 36;
-
-		if (this.scene.children.length < 1) {
-			console.log("did i add the planes group to the scene?");
-			this.scene.add(this.planes)
-		}
 		for (let i = 0; i < this.planeCount; i++) {
-			const material = new THREE.MeshBasicMaterial({
-				color: 0xEEEEEE,
-				side: THREE.DoubleSide
+			const material = new THREE.ShaderMaterial({
+				fragmentShader, vertexShader,
+				side: THREE.DoubleSide,
+				uniforms: {
+					uRotation: { value: 0 },
+					uTime: { value: 0 },
+					uRippleIntensity: { value: 0.5 },
+					uTexture: { value: this.images[i] },
+					uWaveAmplitude: { value: this.waveAmplitude },
+				}
 			})
 
-			const geometry = new THREE.PlaneGeometry(1.5, 1);
+			const geometry = new THREE.PlaneGeometry(1.5, 1, 64, 64);
 			const plane = new THREE.Mesh(geometry, material);
-
-			plane.position.set(0, 0, -i * 0.01);
-			plane.scale.set(1, 1, 1);
 
 			this.planes.add(plane);
 			plane.updateMatrixWorld()
 		}
 
-		console.log(this.scene);
+		this.stackPlanes()
+	}
 
-		setTimeout(() => {
-			this.animate()
-		}, 1000)
+	stackPlanes() {
+		this.planes.children.forEach((plane, i) => {
+			gsap.to(plane.position, {
+				x: 0,
+				y: 0,
+				z: -i * 0.01,
+				duration: 1.5,
+				ease: 'power3.inOut'
+			})
+			gsap.to(plane.rotation, {
+				x: 0,
+				y: 0,
+				z: 0,
+				duration: 1.5,
+				ease: 'power3.inOut'
+			})
+		})
 	}
 
 	initLinearPlanes() {
 		const spacing = 1.25;
 		const planes = this.planes.children;
-		
+
 		planes.forEach((plane, i) => {
 			gsap.to(plane.position, {
 				x: 0,
@@ -100,6 +166,7 @@ export default class Planes {
 				duration: 1.5,
 				ease: 'power3.inOut'
 			})
+
 			gsap.to(this.camera.position, {
 				z: 3,
 				duration: 1.5,
@@ -107,21 +174,25 @@ export default class Planes {
 			})
 
 			// plane.position.set(0, 0, -i * spacing);
-			
+
 			plane.updateMatrixWorld()
 		})
 	}
 
 	switchLayout(layout) {
 		this.planesRotationTl?.kill()
-		if (layout === 'Linear') {
-			this.initLinearPlanes()
-		} else if (layout === 'Circular') {
-			this.createPlanes()
-		} else if (layout === 'Reset') {
-			this.destroy()
-			this.createPlanes()
-		}
+		this.currentLayout = layout
+		const config = this.layouts[layout]
+		if (!config) return
+
+		// Reset drag velocity so it doesn't fight the new layout
+		this.drag.velocityX = 0
+
+		gsap.to(this.camera.position, { ...config.camera.position, duration: 1.5, ease: 'power3.inOut' })
+		gsap.to(this.camera.rotation, { ...config.camera.rotation, duration: 1.5, ease: 'power3.inOut' })
+		gsap.to(this.planes.rotation, { ...config.planes.rotation, duration: 1.5, ease: 'power3.inOut' })
+
+		config.init()
 	}
 
 	animate() {
@@ -232,11 +303,24 @@ export default class Planes {
 		});
 		this.scene.remove(this.planes);
 		window.removeEventListener('click', this._clickHandler);
+
+		// Clean up drag listeners
+		window.removeEventListener('pointerdown', this._onPointerDown)
+		window.removeEventListener('pointermove', this._onPointerMove)
+		window.removeEventListener('pointerup', this._onPointerUp)
+		window.removeEventListener('pointercancel', this._onPointerUp)
 	}
 
 	update() {
+		this._updateDrag()
+
+		// Keep uTime alive for ripple wave animation
+		this.planes.children.forEach(plane => {
+			plane.material.uniforms.uTime.value = this.time.elapsed
+		})
+
 		if (this.mouse.mouseMoved && (this.animated || this.pickedPlane)) {
-			this.updateRaycast();
+			// this.updateRaycast()
 		}
 	}
 
@@ -245,12 +329,12 @@ export default class Planes {
 
 		this._spreadPlanes();
 		this._moveCamera();
-		this._rotateCarousel();
-		this._attachDebugOnComplete();
+		// this._rotateCarousel();
+		// this._attachDebugOnComplete();
 	}
 
 	_spreadPlanes() {
-		const radius = 5;
+		const radius = 3;
 		const angleStep = (Math.PI * 2) / this.planes.children.length;
 
 		this.planes.children.forEach((plane, i) => {
@@ -389,5 +473,66 @@ export default class Planes {
 				});
 			}
 		});
+	}
+
+	_initDragListeners() {
+		this._onPointerDown = (e) => {
+			this.drag.active = true
+			this.drag.startX = e.clientX ?? e.touches?.[0]?.clientX ?? 0
+			this.drag.lastX = this.drag.startX
+			this.drag.velocityX = 0
+
+			// Pause the carousel while the user is dragging
+			this.planesRotationTl?.pause()
+		}
+
+		this._onPointerMove = (e) => {
+			if (!this.drag.active) return
+			const clientX = e.clientX ?? e.touches?.[0]?.clientX ?? 0
+			const deltaX = clientX - this.drag.lastX
+
+			this.drag.velocityX = deltaX * this.drag.sensitivity
+			this.planes.rotation.y += this.drag.velocityX
+			this.drag.lastX = clientX
+
+			// Push live velocity to all shaders
+			this.planes.children.forEach(plane => {
+				plane.material.uniforms.uRotation.value = this.drag.velocityX
+			})
+		}
+
+		this._onPointerUp = () => {
+			if (!this.drag.active) return
+			this.drag.active = false
+			// velocity carries over into the update loop for damping
+		}
+
+		window.addEventListener('pointerdown', this._onPointerDown)
+		window.addEventListener('pointermove', this._onPointerMove)
+		window.addEventListener('pointerup', this._onPointerUp)
+		window.addEventListener('pointercancel', this._onPointerUp)
+	}
+
+	// ── Apply damping every frame ─────────────────────────────────────────────
+
+	_updateDrag() {
+		if (this.drag.active) return
+
+		if (Math.abs(this.drag.velocityX) > 0.0001) {
+			this.planes.rotation.y += this.drag.velocityX
+			this.drag.velocityX *= this.drag.damping
+
+			// Feed velocity into all plane uniforms
+			this.planes.children.forEach(plane => {
+				plane.material.uniforms.uRotation.value = this.drag.velocityX
+			})
+		} else {
+			this.drag.velocityX = 0
+
+			// Decay the ripple back to 0 smoothly
+			this.planes.children.forEach(plane => {
+				plane.material.uniforms.uRotation.value *= 0.92
+			})
+		}
 	}
 }

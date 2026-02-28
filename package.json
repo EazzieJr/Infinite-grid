@@ -9,6 +9,7 @@
   },
   "devDependencies": {
     "vite": "^6.2.2",
+    "vite-plugin-glsl": "^1.5.5",
     "vite-plugin-restart": "^0.4.2"
   },
   "dependencies": {
