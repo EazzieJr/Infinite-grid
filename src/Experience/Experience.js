@@ -59,7 +59,7 @@ export default class Experience {
 	}
 
 	setFog() {
-		this.scene.fog = new THREE.Fog(0xffffff, 1, 25)
+		this.scene.fog = new THREE.Fog(0xff0000, 15, 20)
 
 		if (this.debug.active) {
 			this.debugFolder.addColor(this.scene.fog, "color").name("Fog (color)")
